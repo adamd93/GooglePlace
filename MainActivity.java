@@ -1,10 +1,14 @@
 package mappapp.adam.googleplaces;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,21 +23,24 @@ import org.json.JSONObject;
 import android.app.ListActivity;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 public class MainActivity extends ListActivity {
     ArrayList<GooglePlace> venuesList;
-
+    String server_response;
+    GPSTracker gps;
     // the google key
 
     // ============== YOU SHOULD MAKE NEW KEYS ====================//
     final String GOOGLE_KEY = "AIzaSyB-1fag6ZNgvgmIhFMQm6KAAUgA7mVY3gg";
 
     // we will need to take the latitude and the logntitude from a certain point
-    // this is the center of New York
-    final String latitude = "40.7463956";
-    final String longtitude = "-73.9852992";
+    // this is the carlow
+    final String latitude = "52.839714";
+    final String longtitude = "-6.928389299999935";
 
     ArrayAdapter<String> myAdapter;
 
@@ -48,16 +55,34 @@ public class MainActivity extends ListActivity {
 
     private class googleplaces extends AsyncTask<View, Void, String> {
 
-        String temp;
-
         @Override
         protected String doInBackground(View... urls) {
+            /*final Services globalVariable = (Services) getApplicationContext();
+            gps = new GPSTracker(MainActivity.this);
+            double latitude = globalVariable.getLatitude();
+            double longitude = globalVariable.getLongitude();*/
+
             System.out.println("FUCK!!!");
-            // make Call to the url
-            //temp = makeCall("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=100&sensor=true&key=" + GOOGLE_KEY);
-            makeCall("thing");
-            //print the call in the console
-            System.out.println("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=100&sensor=true&key=" + GOOGLE_KEY);
+            URL url;
+            HttpURLConnection urlConnection = null;
+            try {
+                url = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=1000&sensor=true&key=" + GOOGLE_KEY);
+                urlConnection = (HttpURLConnection) url.openConnection();
+
+                int responseCode = urlConnection.getResponseCode();
+
+                if(responseCode == HttpURLConnection.HTTP_OK){
+                    server_response = readStream(urlConnection.getInputStream());
+                    Log.v("CatalogClient", server_response);
+                }
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
             return "";
         }
 
@@ -65,18 +90,48 @@ public class MainActivity extends ListActivity {
         protected void onPreExecute() {
             // we can start a progress bar here
         }
-
         @Override
-        protected void onPostExecute(String result) {
-            if (temp == null) {
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+
+            Log.e("Response", "" + server_response);
+            getPlaces(server_response);
+
+
+        }
+        private String readStream(InputStream in) {
+            BufferedReader reader = null;
+            StringBuffer response = new StringBuffer();
+            try {
+                reader = new BufferedReader(new InputStreamReader(in));
+                String line = "";
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return response.toString();
+        }
+
+        public void getPlaces(String result) {
+            if (result == null) {
                 // we have an error to the call
                 // we can also stop the progress bar
                 System.out.println("error");
             } else {
                 // all things went right
-                System.out.println(temp);
+               // System.out.println(temp);
                 // parse Google places search result
-                venuesList = (ArrayList<GooglePlace>) parseGoogleParse(temp);
+                venuesList = (ArrayList<GooglePlace>) parseGoogleParse(result);
 
                 List<String> listTitle = new ArrayList<String>();
 
@@ -92,78 +147,6 @@ public class MainActivity extends ListActivity {
                 setListAdapter(myAdapter);
             }
         }
-    }
-
-    public static String makeCall(String url) {
-        URL url1;
-        System.out.println("went into make call");
-        HttpURLConnection urlConnection = null;
-        // string buffers the url
-        StringBuffer buffer_string = new StringBuffer(url);
-        //temp = makeCall("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=100&sensor=true&key=" + GOOGLE_KEY);
-        String replyString = "";
-
-        // instanciate an HttpClient
-        HttpClient httpclient = new DefaultHttpClient();
-        // instanciate an HttpGet
-        HttpGet httpget = new HttpGet(buffer_string.toString());
-        final String GOOGLE_KEY = "AIzaSyB-1fag6ZNgvgmIhFMQm6KAAUgA7mVY3gg";
-
-        // we will need to take the latitude and the logntitude from a certain point
-        // this is the center of New York
-        final String latitude = "40.7463956";
-        final String longtitude = "-73.9852992";
-        try {
-            url1 = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=100&sensor=true&key=" + GOOGLE_KEY);
-
-            urlConnection = (HttpURLConnection) url1
-                    .openConnection();
-            System.out.println(url1);
-            InputStream in = urlConnection.getInputStream();
-
-            InputStreamReader isw = new InputStreamReader(in);
-
-            int data = isw.read();
-            while (data != -1) {
-                char current = (char) data;
-                data = isw.read();
-                System.out.print(current);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Error in url connection catch");
-        } finally {
-            if (urlConnection != null) {
-                urlConnection.disconnect();
-                System.out.println("Error in url connection Finally");
-
-            }
-        }
-/*
-        try {
-
-            url1 = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=100&sensor=true&key=" + GOOGLE_KEY);
-
-            // get the responce of the httpclient execution of the url
-            HttpResponse response = httpclient.execute(httpget);
-            InputStream is = response.getEntity().getContent();
-
-            // buffer input stream the result
-            BufferedInputStream bis = new BufferedInputStream(is);
-            ByteArrayBuffer baf = new ByteArrayBuffer(20);
-            int current = 0;
-            while ((current = bis.read()) != -1) {
-                baf.append((byte) current);
-            }
-            // the result as a string is ready for parsing
-            replyString = new String(baf.toByteArray());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }*/
-        System.out.println(replyString);
-
-        // trim the whitespaces
-        return replyString.trim();
     }
 
     private static ArrayList<GooglePlace> parseGoogleParse(final String response) {
