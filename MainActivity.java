@@ -27,11 +27,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
+import mappapp.adam.googleplaces.Places;
 
 public class MainActivity extends ListActivity {
     ArrayList<GooglePlace> venuesList;
     String server_response;
     GPSTracker gps;
+    String userLocation;
     // the google key
 
     // ============== YOU SHOULD MAKE NEW KEYS ====================//
@@ -39,34 +41,46 @@ public class MainActivity extends ListActivity {
 
     // we will need to take the latitude and the logntitude from a certain point
     // this is the carlow
-    final String latitude = "52.839714";
-    final String longtitude = "-6.928389299999935";
+    /*final String latitude = "52.839714";
+    final String longtitude = "-6.928389299999935";*/
+    double latitude;
+    double longitude;
+    //Places plc = new Places();
+
 
     ArrayAdapter<String> myAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        gps = new GPSTracker(MainActivity.this);
         setContentView(R.layout.activity_main);
+       // userLocation = plc.getUserLocation();
 
         // start the AsyncTask that makes the call for the venus search.
         new googleplaces().execute();
     }
+    public void executeLocaton(){
+        //new googleplaces().execute();
+    }
 
-    private class googleplaces extends AsyncTask<View, Void, String> {
+    public class googleplaces extends AsyncTask<View, Void, String> {
 
         @Override
         protected String doInBackground(View... urls) {
             /*final Services globalVariable = (Services) getApplicationContext();
-            gps = new GPSTracker(MainActivity.this);
             double latitude = globalVariable.getLatitude();
             double longitude = globalVariable.getLongitude();*/
+            latitude = gps.getLatitude();
+            longitude = gps.getLongitude();
 
             System.out.println("FUCK!!!");
             URL url;
             HttpURLConnection urlConnection = null;
             try {
-                url = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longtitude + "&radius=1000&sensor=true&key=" + GOOGLE_KEY);
+                url = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + latitude + "," + longitude + "&radius=3000&sensor=true&key=" + GOOGLE_KEY);
+                //url = new URL("https://maps.googleapis.com/maps/api/place/search/json?location=" + userLocation + "&radius=1000&sensor=true&key=" + GOOGLE_KEY);
+
                 urlConnection = (HttpURLConnection) url.openConnection();
 
                 int responseCode = urlConnection.getResponseCode();
